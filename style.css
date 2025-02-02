@@ -129,7 +129,7 @@ a:hover img {
 
 /* l-footer */
 .l-footer {
-  background-color: #efefef;
+  background-color: #EBEBEB;
 }
 .l-footer__content {
   position: relative;
@@ -737,6 +737,9 @@ a:hover img {
 .p-monthlyArchive__months {
   margin: 5px 0 30px 15px;
 }
+.p-monthlyArchive__months.hide {
+  display: none;
+}
 .p-monthlyArchive__month {
   font-size: 1.2rem;
   margin-left: 15px;
@@ -794,7 +797,6 @@ a:hover img {
 
 .p-banner {
   padding: 45px 0;
-  background: #efefef;
 }
 .p-banner__list {
   display: flex;

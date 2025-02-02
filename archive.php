@@ -10,7 +10,10 @@
 			}
 			?>
 
-			<?php if(is_category()): // カテゴリアーカイブの場合 ?>
+			<?php if (get_query_var('photo_date')): // 撮影日アーカイブの場合 ?>
+			<h2 class="p-archive__heading">撮影日が <?php echo esc_html(date_i18n('Y年n月', strtotime($_GET['photo_date']))); ?> の記事一覧です</h2>
+
+			<?php elseif(is_category()): // カテゴリアーカイブの場合 ?>
 			<h2 class="p-archive__heading"><?php single_cat_title(); ?> カテゴリの記事一覧です</h2>
 			<?php elseif(is_tag()): // タグアーカイブ場合 ?>
 			<h2 class="p-archive__heading"><?php single_cat_title(); ?> タグの記事一覧です</h2>

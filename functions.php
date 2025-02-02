@@ -173,23 +173,9 @@ function get_current_link() {
   return (is_ssl() ? 'https' : 'http') . '://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
 }
 
-/* ---------------------------------------
-管理画面内の設定
---------------------------------------- */
-//プロフィール欄HTMLタグ有効
-remove_filter('pre_user_description', 'wp_filter_kses');
-
-// カテゴリ説明文HTML有効
-remove_filter( 'pre_term_description', 'wp_filter_kses' );
-
-//カテゴリ説明欄HTMLタグ有効
-remove_filter( 'pre_term_name', 'wp_filter_kses' );
-
-//faviconの設定
-function admin_favicon() {
- echo '<link rel="shortcut icon" type="image/x-icon" href="'.get_template_directory_uri().'/favicon.ico" />';
-}
-add_action('admin_head', 'admin_favicon');
+/* ***************************************
+* 投稿画面
+*************************************** */
 
 /* ---------------------------------------
 クイックタグを追加する
@@ -271,7 +257,7 @@ function show_Linkcard($atts) {
 //関数利用時のフォーマット
 add_shortcode("sc_Linkcard", "show_Linkcard");
 
-/* リンクをカード形式で表示するための関数 */
+/* リンクをカード形式で表示するための関数2 */
 function show_LinkcardEx($atts) {
   extract(shortcode_atts(array(
     'url'=>"",
@@ -408,6 +394,28 @@ function add_index( $content ) {
 }
 add_filter( 'the_content', 'add_index' );
 
+/* ***************************************
+* 管理画面上の機能 
+*************************************** */
+
+/* ---------------------------------------
+管理画面内の設定
+--------------------------------------- */
+//プロフィール欄HTMLタグ有効
+remove_filter('pre_user_description', 'wp_filter_kses');
+
+// カテゴリ説明文HTML有効
+remove_filter( 'pre_term_description', 'wp_filter_kses' );
+
+//カテゴリ説明欄HTMLタグ有効
+remove_filter( 'pre_term_name', 'wp_filter_kses' );
+
+//faviconの設定
+function admin_favicon() {
+ echo '<link rel="shortcut icon" type="image/x-icon" href="'.get_template_directory_uri().'/favicon.ico" />';
+}
+add_action('admin_head', 'admin_favicon');
+
 /* ---------------------------------------
 WordPressの投稿一覧にアクセス数を表示
 --------------------------------------- */
@@ -502,3 +510,87 @@ if(function_exists('wpp_get_views')){
     },10,2);
 
 }
+
+/* ---------------------------------------
+投稿画面に「撮影日」フィールドを追加
+--------------------------------------- */
+// 撮影日メタボックスを追加
+function add_photo_date_meta_box() {
+    add_meta_box(
+        'photo_date_meta_box',       // メタボックスID
+        '撮影日',                    // メタボックスのタイトル
+        'display_photo_date_meta_box', // コールバック関数
+        'post',                      // 投稿タイプ（投稿に追加）
+        'side',                      // 表示場所（サイドメニュー）
+        'default'                    // 優先度
+    );
+}
+add_action('add_meta_boxes', 'add_photo_date_meta_box');
+
+// 撮影日メタボックスの表示内容
+function display_photo_date_meta_box($post) {
+    $photo_date = get_post_meta($post->ID, '_photo_date', true);
+    wp_nonce_field(basename(__FILE__), 'photo_date_nonce'); // セキュリティのためのノンスフィールド
+    ?>
+    <label for="photo_date">撮影日を選択:</label>
+    <input type="date" id="photo_date" name="photo_date" value="<?php echo esc_attr($photo_date); ?>" style="width: 100%;">
+    <?php
+}
+
+// 撮影日データを保存
+function save_photo_date_meta($post_id) {
+    // セキュリティチェック
+    if (!isset($_POST['photo_date_nonce']) || !wp_verify_nonce($_POST['photo_date_nonce'], basename(__FILE__))) {
+        return $post_id;
+    }
+
+    // 自動保存時は処理を中断
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return $post_id;
+    }
+
+    // 権限チェック
+    if (!current_user_can('edit_post', $post_id)) {
+        return $post_id;
+    }
+
+    // 撮影日を保存
+    $new_photo_date = (isset($_POST['photo_date']) ? sanitize_text_field($_POST['photo_date']) : '');
+    update_post_meta($post_id, '_photo_date', $new_photo_date);
+}
+add_action('save_post', 'save_photo_date_meta');
+
+//撮影日のカスタムクエリを追加
+function filter_posts_by_photo_date($query) {
+    if (!is_admin() && $query->is_main_query() && get_query_var('photo_date')) {
+        $photo_date = sanitize_text_field(get_query_var('photo_date'));
+        $query->set('meta_key', '_photo_date');
+        $query->set('meta_value', $photo_date);
+        $query->set('meta_compare', 'LIKE');  // 撮影日の部分一致で検索
+    }
+}
+add_action('pre_get_posts', 'filter_posts_by_photo_date');
+
+function add_photo_date_query_var($vars) {
+    $vars[] = 'photo_date';  // クエリ変数を追加
+    return $vars;
+}
+add_filter('query_vars', 'add_photo_date_query_var');
+
+function add_photo_date_rewrite_rule() {
+    add_rewrite_rule(
+        '^photo/([0-9]{4})/([0-9]{2})/?$', // URL構造 /photo/2025/02/
+        'index.php?photo_date=$1-$2',      // 内部的には ?photo_date=2025-02 と同じ扱いに
+        'top'
+    );
+}
+add_action('init', 'add_photo_date_rewrite_rule');
+
+function load_archive_template_for_photo_date($template) {
+    if (get_query_var('photo_date')) {
+        // 撮影日クエリがある場合、archive.php を使用
+        return locate_template('archive.php');
+    }
+    return $template;
+}
+add_filter('template_include', 'load_archive_template_for_photo_date');

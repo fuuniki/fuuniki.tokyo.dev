@@ -834,6 +834,10 @@ a:hover img {
   color: #333;
   text-decoration: none;
 }
+.p-article__element span {
+  color: #333;
+  text-decoration: none;
+}
 .p-article__elementList {
   margin-right: 10px;
 }
@@ -881,6 +885,13 @@ a:hover img {
 .p-article__elementList--date::before {
   font-family: FontAwesome;
   content: "\f017";
+}
+.p-article__elementList--shootingdate {
+  line-height: 1;
+}
+.p-article__elementList--shootingdate::before {
+  font-family: FontAwesome;
+  content: "\f030";
 }
 .p-article__eyeCatching {
   margin-top: 30px;

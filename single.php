@@ -57,9 +57,32 @@
 							$month  = get_the_date( 'm' );
 							?>
 							<a href="<?php echo get_month_link( $year, $month ); ?>" rel="nofollow">
-								<time><?php echo mysql2date('Y年n月j日', $post->post_date); ?></time>
+								更新日：<time><?php echo mysql2date('Y年n月j日', $post->post_date); ?></time>
 							</a>
 						</div>
+
+						<?php
+						// 撮影日のデータ取得
+						$photo_date = get_post_meta(get_the_ID(), '_photo_date', true);
+						if (!empty($photo_date)) :
+							$photo_year = date('Y', strtotime($photo_date));
+							$photo_month = date('m', strtotime($photo_date));
+							// 撮影日の月別アーカイブリンクを生成
+							$photo_archive_link = add_query_arg('photo_date', $photo_year . '-' . $photo_month, home_url());
+							?>
+							<div class="p-article__elementList p-article__elementList--shootingdate">
+								<?php
+								/*
+								<a href="<?php echo esc_url($photo_archive_link); ?>" rel="nofollow">
+									撮影日：<time><?php echo esc_html(date_i18n('Y年n月j日', strtotime($photo_date))); ?></time>
+								</a>
+								*/
+								?>
+								<span>
+									撮影日：<time><?php echo esc_html(date_i18n('Y年n月j日', strtotime($photo_date))); ?></time>
+								</span>
+							</div>
+						<?php endif; ?>
 
 					</div>
 					<?php

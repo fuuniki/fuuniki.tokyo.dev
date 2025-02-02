@@ -1,5 +1,12 @@
 <?php get_header(); ?>
 
+<?php
+    // 記事のビュー数を更新
+    if (!is_user_logged_in() && !is_robots()) {
+      setPostViews(get_the_ID());
+    }
+?>
+
 <div class="l-inner">
 	<div class="l-wrapperFlex">
 		<main class="l-main p-archive">

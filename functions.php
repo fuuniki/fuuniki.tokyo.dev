@@ -200,3 +200,305 @@ function appthemes_add_quicktags() {
   }
 }
 add_action( 'admin_print_footer_scripts', 'appthemes_add_quicktags' );
+
+/* ---------------------------------------
+ブログカード
+--------------------------------------- */
+/* リンクをカード形式で表示するための関数 */
+function show_Linkcard($atts) {
+  extract(shortcode_atts(array(
+    'url'=>"",
+    'title'=>"",
+    'excerpt'=>""
+  ),$atts));
+
+  //OGP情報を取得
+  require_once 'OpenGraph.php';
+  $graph = OpenGraph::fetch($url);
+
+  //OGPタグからタイトルを取得
+  $Link_title = $graph->title;
+  $src        = $graph->image;
+
+  //OGPタグからdescriptionを取得
+  $Link_description = wp_trim_words($graph->description, 40, '…' );
+  if(!empty($excerpt)){
+    $Link_description = $excerpt;//値を取得できない時場合は直にexcerpt=""を入力
+  }
+
+  $xLink_img = '<img src="'. $src .'" />';
+
+  //文字化け回避
+  $detects = array(
+   'ASCII','EUC-JP','SJIS', 'JIS', 'CP51932','UTF-16', 'ISO-8859-1'
+  );
+
+  // タイトルの文字化け回避
+  $title_check = utf8_decode($Link_title);
+  if(mb_detect_encoding($title_check) == 'UTF-8'){
+      $Link_title = $title_check;
+  }
+  if(mb_detect_encoding($Link_title) != 'UTF-8'){
+      $Link_title = mb_convert_encoding($Link_title, 'UTF-8', mb_detect_encoding($Link_title, $detects, true));
+  }
+
+  // descriptionの文字化け回避
+ $description_check = utf8_decode($Link_description);
+ if(mb_detect_encoding($description_check) == 'UTF-8'){
+     $Link_description = $description_check;
+ }
+ if(mb_detect_encoding($Link_description) != 'UTF-8'){
+     $Link_description = mb_convert_encoding($Link_description, 'UTF-8', mb_detect_encoding($Link_description, $detects, true));
+ }
+
+  //HTML出力
+  $sc_Linkcard ='';
+  $sc_Linkcard .='
+  <div class="EmbedBaseLinkCard">
+    <a href="'. $url .'" class="EmbedBaseLinkCard__link">
+      <div class="EmbedBaseLinkCard__main">
+        <div class="EmbedBaseLinkCard__title">'. $Link_title .'</div>
+        <div class="EmbedBaseLinkCard__description">'. $Link_description .'</div>
+        <div class="EmbedBaseLinkCard__meta">'. $url .'</div>
+      </div>
+      <div class="EmbedBaseLinkCard__thumbnail">'. $xLink_img .'</div>
+    </a>
+  </div>
+  ';
+
+  return $sc_Linkcard;
+}
+//関数利用時のフォーマット
+add_shortcode("sc_Linkcard", "show_Linkcard");
+
+/* リンクをカード形式で表示するための関数 */
+function show_LinkcardEx($atts) {
+  extract(shortcode_atts(array(
+    'url'=>"",
+    'title'=>"",
+    'excerpt'=>""
+  ),$atts));
+
+  //OGP情報を取得
+  require_once 'OpenGraph.php';
+  $graph = OpenGraph::fetch($url);
+
+  //OGPタグからタイトルを取得
+  $Link_title = $graph->title;
+  $src        = $graph->image;
+
+  //OGPタグからdescriptionを取得
+  $Link_description = wp_trim_words($graph->description, 40, '…' );
+  if(!empty($excerpt)){
+    $Link_description = $excerpt;//値を取得できない時場合は直にexcerpt=""を入力
+  }
+
+  $xLink_img = '<img src="'. $src .'" />';
+
+  //文字化け回避
+  $detects = array(
+   'ASCII','EUC-JP','SJIS', 'JIS', 'CP51932','UTF-16', 'ISO-8859-1'
+  );
+
+  // タイトルの文字化け回避
+  $title_check = utf8_decode($Link_title);
+  if(mb_detect_encoding($title_check) == 'UTF-8'){
+      $Link_title = $title_check;
+  }
+  if(mb_detect_encoding($Link_title) != 'UTF-8'){
+      $Link_title = mb_convert_encoding($Link_title, 'UTF-8', mb_detect_encoding($Link_title, $detects, true));
+  }
+
+  // descriptionの文字化け回避
+ $description_check = utf8_decode($Link_description);
+ if(mb_detect_encoding($description_check) == 'UTF-8'){
+     $Link_description = $description_check;
+ }
+ if(mb_detect_encoding($Link_description) != 'UTF-8'){
+     $Link_description = mb_convert_encoding($Link_description, 'UTF-8', mb_detect_encoding($Link_description, $detects, true));
+ }
+
+  //HTML出力
+  $sc_Linkcard ='';
+  $sc_Linkcard .='
+  <div class="EmbedBaseLinkCard">
+    <a href="'. $url .'" class="EmbedBaseLinkCard__link" target="_blank">
+      <div class="EmbedBaseLinkCard__main">
+        <div class="EmbedBaseLinkCard__title">'. $Link_title .'</div>
+        <div class="EmbedBaseLinkCard__description">'. $Link_description .'</div>
+        <div class="EmbedBaseLinkCard__meta">'. $url .'</div>
+      </div>
+      <div class="EmbedBaseLinkCard__thumbnail">'. $xLink_img .'</div>
+    </a>
+  </div>
+  ';
+
+  return $sc_Linkcard;
+}
+//関数利用時のフォーマット
+add_shortcode("sc_LinkcardEx", "show_LinkcardEx");
+
+/* ---------------------------------------
+目次を追加する
+--------------------------------------- */
+function add_index( $content ) {
+	if ( is_single() ) {
+		$pattern = '/<h[1-3]>(.+?)<\/h[1-3]>/s';
+		preg_match_all( $pattern, $content, $elements, PREG_SET_ORDER );
+
+		if ( count( $elements ) >= 1 ) {
+			$toc          = '';
+			$i            = 0;
+			$currentlevel = 0;
+			$id           = 'chapter-';
+
+			foreach ( $elements as $element ) {
+				$id           .= $i + 1;
+				$regex         = '/' . preg_quote( $element[0], '/' ) . '/su';
+				$replace_title = preg_replace( '/<(h[1-3])>(.+?)<\/(h[1-3])>/s', '<$1 id="' . $id . '">$2</$3>', $element[0], 1 );
+				$content       = preg_replace( $regex, $replace_title, $content, 1 );
+
+				if ( strpos( $element[0], '<h2' ) !== false ) {
+					$level = 1;
+				} elseif ( strpos( $element[0], '<h3' ) !== false ) {
+					$level = 2;
+				} elseif ( strpos( $element[0], '<h4' ) !== false ) {
+					$level = 3;
+				} elseif ( strpos( $element[0], '<h5' ) !== false ) {
+					$level = 4;
+				} elseif ( strpos( $element[0], '<h6' ) !== false ) {
+					$level = 5;
+				}
+
+				while ( $currentlevel < $level ) {
+					if ( 0 === $currentlevel ) {
+						$toc .= '<ol class="p-article__indexList">';
+					} else {
+						$toc .= '<ol class="p-article__indexList--child">';
+					}
+					$currentlevel++;
+				}
+
+				while ( $currentlevel > $level ) {
+					$toc .= '</li></ol>';
+					$currentlevel--;
+				}
+
+				// 目次の項目で使用する要素を指定
+				$toc .= '<li class="p-article__indexItem"><a href="#' . $id . '" class="p-article__indexLink">' . $element[1] . '</a>';
+				$i++;
+				$id = 'chapter-';
+			} // foreach
+
+			// 目次の最後の項目をどの要素から作成したかによりタグの閉じ方を変更
+			while ( $currentlevel > 0 ) {
+				$toc .= '</li></ol>';
+				$currentlevel--;
+			}
+
+			$index = '<div class="p-article__index" id="toc"><div class="p-article__indexTitle">目次</div>' . $toc . '</div>';
+			$h2    = '/<h2.*?>/i';
+
+			if ( preg_match( $h2, $content, $h2s ) ) {
+				$content = preg_replace( $h2, $index . $h2s[0], $content, 1 );
+			}
+		}
+	}
+	return $content;
+}
+add_filter( 'the_content', 'add_index' );
+
+/* ---------------------------------------
+WordPressの投稿一覧にアクセス数を表示
+--------------------------------------- */
+// ページビュー数のカウンターのセット
+function setPostViews($postID) {
+    $count_key = 'post_views_count';
+    $count = get_post_meta($postID, $count_key, true);
+    if($count==''){
+        $count = 0;
+        delete_post_meta($postID, $count_key);
+        add_post_meta($postID, $count_key, '0');
+    }else{
+        $count++;
+        update_post_meta($postID, $count_key, $count);
+    }
+}
+// ページビュー数を取得する
+function getPostViews($postID){
+    $count_key = 'post_views_count';
+    $count = get_post_meta($postID, $count_key, true);
+    if($count==''){
+        delete_post_meta($postID, $count_key);
+        add_post_meta($postID, $count_key, '0');
+        return "0 View";
+    }
+    return $count.' Views';
+}
+// 管理画面に閲覧数項目を追加する
+add_filter( 'manage_pages_columns', 'count_add_column' );
+add_filter( 'manage_posts_columns', 'count_add_column' );
+function count_add_column( $columns ) {
+    $columns['views'] = '閲覧数';
+    return $columns;
+}
+
+// 管理画面にページビュー数を表示する
+add_action( 'manage_pages_custom_column' , 'count_add_column_data', 10, 2 );
+add_action( 'manage_posts_custom_column' , 'count_add_column_data', 10, 2 );
+function count_add_column_data( $column, $post_id ) {
+    switch ( $column ) {
+        case 'views' :
+                        echo getPostViews($post_id);
+            break;
+    }
+}
+
+// 閲覧数項目を並び替えれる要素にする
+add_filter( 'manage_edit-page_sortable_columns', 'column_views_sortable' );
+add_filter( 'manage_edit-post_sortable_columns', 'column_views_sortable' );
+function column_views_sortable( $newcolumn ) {
+    $columns['views'] = 'views';
+    return $columns;
+}
+
+// ページビュー数で並び替えるようにリクエストを送る
+add_filter( 'request', 'sort_views_column' );
+function sort_views_column( $vars )
+{
+    if ( isset( $vars['orderby'] ) && 'views' == $vars['orderby'] ) {
+        $vars = array_merge( $vars, array(
+            'meta_key' => 'post_views_count', //Custom field key
+            'orderby' => 'meta_value_num') //Custom field value (number)
+        );
+    }
+    return $vars;
+}
+
+// 記事のPVをカウントする
+remove_action( 'wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0);
+
+/* ---------------------------------------
+記事のアクセス数（ページビュー数）を計測（WordPress Popular Posts）
+--------------------------------------- */
+/* 管理画面にPV数を表示 */
+if(function_exists('wpp_get_views')){
+
+    add_filter('manage_posts_columns', function($columns){
+            $columns['view'] = "View";
+            return $columns;
+    });
+
+    add_action('manage_posts_custom_column',function($column_name, $post_id){
+        if($column_name == 'view'){
+        echo '日：', wpp_get_views ( get_the_ID(), 'daily' );
+        echo "<br />";
+        echo '週：', wpp_get_views ( get_the_ID(), 'weekly' );
+        echo "<br />";
+        echo '月：', wpp_get_views ( get_the_ID(), 'monthly' );
+        echo "<br />";
+        echo '全：', wpp_get_views ( get_the_ID(), 'all' );
+        }
+    },10,2);
+
+}

@@ -173,6 +173,133 @@ function get_current_link() {
   return (is_ssl() ? 'https' : 'http') . '://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
 }
 
+/* ---------------------------------------
+JSON-LDによる構造化データの追加
+--------------------------------------- */
+//TOPページ
+function add_json_ld_for_home_page() {
+    if (is_front_page() || is_home()) {  // トップページまたはブログ一覧ページの場合
+        $json_ld = array(
+            "@context" => "https://schema.org",
+            "@type" => "WebSite",
+            "name" => get_bloginfo('name'),
+            "url" => home_url(),
+            "logo" => get_site_icon_url(),
+            "publisher" => array(
+                "@type" => "Organization",
+                "name" => get_bloginfo('name'),
+                "logo" => get_site_icon_url()
+            )
+        );
+
+        // JSON-LDをページに埋め込む
+        echo '<script type="application/ld+json">' . json_encode($json_ld) . '</script>';
+    }
+}
+add_action('wp_head', 'add_json_ld_for_home_page');
+
+//カテゴリ
+function add_json_ld_for_category_archive() {
+    if (is_category()) {  // カテゴリアーカイブの場合
+        $category = get_queried_object();  // 現在のカテゴリーを取得
+        $posts = get_posts(array(
+            'category' => $category->term_id,
+            'posts_per_page' => 5  // 上位5件の記事を取得
+        ));
+        
+        $items = array();
+        foreach ($posts as $post) {
+            $items[] = array(
+                "@type" => "ListItem",
+                "position" => count($items) + 1,
+                "url" => get_permalink($post->ID),
+                "name" => get_the_title($post->ID)
+            );
+        }
+
+        $json_ld = array(
+            "@context" => "https://schema.org",
+            "@type" => "ItemList",
+            "name" => 'Category Archive: ' . single_cat_title('', false),
+            "url" => get_category_link($category->term_id),
+            "itemListElement" => $items
+        );
+
+        // JSON-LDをページに埋め込む
+        echo '<script type="application/ld+json">' . json_encode($json_ld) . '</script>';
+    }
+}
+add_action('wp_head', 'add_json_ld_for_category_archive');
+
+//タグ
+function add_json_ld_for_tag_archive() {
+    if (is_tag()) {  // タグアーカイブの場合
+        $tag = get_queried_object();  // 現在のタグを取得
+        $posts = get_posts(array(
+            'tag' => $tag->slug,
+            'posts_per_page' => 5  // 上位5件の記事を取得
+        ));
+        
+        $items = array();
+        foreach ($posts as $post) {
+            $items[] = array(
+                "@type" => "ListItem",
+                "position" => count($items) + 1,
+                "url" => get_permalink($post->ID),
+                "name" => get_the_title($post->ID)
+            );
+        }
+
+        $json_ld = array(
+            "@context" => "https://schema.org",
+            "@type" => "ItemList",
+            "name" => 'Tag Archive: ' . single_tag_title('', false),
+            "url" => get_tag_link($tag->term_id),
+            "itemListElement" => $items
+        );
+
+        // JSON-LDをページに埋め込む
+        echo '<script type="application/ld+json">' . json_encode($json_ld) . '</script>';
+    }
+}
+add_action('wp_head', 'add_json_ld_for_tag_archive');
+
+function custom_yoast_seo_category_schema( $data ) {
+    // カテゴリーページの場合
+    if (is_category()) {
+        $data['name'] = single_cat_title('', false) . ' の投稿';
+    }
+
+    return $data;
+}
+add_filter( 'wpseo_json_ld_output', 'custom_yoast_seo_category_schema' );
+
+// パンくずリストの日付形式をカスタマイズ
+function custom_yoast_breadcrumb_date_format($crumbs) {
+    // アーカイブページの日付取得
+    if (is_archive() && (is_month() || is_day())) {
+        $year = get_query_var('year');
+        $month = get_query_var('monthnum');
+        
+        // 月を2桁形式に変換
+        $month_num = str_pad((int)$month, 2, '0', STR_PAD_LEFT);
+        
+        // 新しい形式： 2025年02月
+        $formatted_date = $year . '年' . $month_num . '月';
+
+        // パンくずリストの年月部分を変更
+        foreach ($crumbs as $key => $crumb) {
+            if (isset($crumb['text']) && preg_match('/\d{1,2}月 \d{4}/', $crumb['text'])) {
+                $crumbs[$key]['text'] = $formatted_date;
+            }
+        }
+    }
+    return $crumbs;
+}
+add_filter('wpseo_breadcrumb_links', 'custom_yoast_breadcrumb_date_format');
+
+
+
 /* ***************************************
 * 投稿画面
 *************************************** */
